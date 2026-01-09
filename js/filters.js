@@ -1,92 +1,52 @@
-import { debounce } from './utils.js';
-import { renderThumbnails } from './thumbnails.js';
-
-const RANDOM_PHOTOS_COUNT = 10;
-const RERENDER_DELAY = 500;
-
-const filtersElement = document.querySelector('.img-filters');
-const filterButtonsElement = filtersElement.querySelector('.img-filters__form');
-const picturesContainerElement = document.querySelector('.pictures');
-
-// Текущий активный фильтр
-let currentFilter = 'default';
-let photos = [];
-
-const showFilters = () => {
-  filtersElement.classList.remove('img-filters--inactive');
+const Filter = {
+  DEFAULT: 'filter-default',
+  RANDOM: 'filter-random',
+  DISCUSSED: 'filter-discussed',
 };
 
-const getRandomPhotos = (photosArray, count) => {
-  const shuffled = [...photosArray].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-};
+const filterElement = document.querySelector('.img-filters');
+let currentFilter = Filter.DEFAULT;
+let pictures = [];
 
-const getDiscussedPhotos = (photosArray) =>
-  [...photosArray].sort((a, b) => b.comments.length - a.comments.length); // сортировка по убыванию комментариев
+const sortRandomly = () => Math.random() - 0.5;
 
-// Функция для применения выбранного фильтра
-const applyFilter = (filter) => {
-  let filteredPhotos = [];
+const sortByComments = (pictureA, pictureB) =>
+  pictureB.comments.length - pictureA.comments.length;
 
-  switch (filter) {
-    case 'random':
-      filteredPhotos = getRandomPhotos(photos, RANDOM_PHOTOS_COUNT);
-      break;
-    case 'discussed':
-      filteredPhotos = getDiscussedPhotos(photos);
-      break;
-    case 'default':
+const getFilteredPictures = () => {
+  switch (currentFilter) {
+    case Filter.RANDOM:
+      return [...pictures].sort(sortRandomly).slice(0, 10);
+    case Filter.DISCUSSED:
+      return [...pictures].sort(sortByComments);
     default:
-      filteredPhotos = [...photos];
-      break;
+      return [...pictures];
   }
-
-  const currentThumbnails = picturesContainerElement.querySelectorAll('.picture');
-  currentThumbnails.forEach((thumbnail) => thumbnail.remove());
-
-  renderThumbnails(filteredPhotos, picturesContainerElement);
 };
 
-const updateActiveFilterButton = (activeButton) => {
-  const buttons = filterButtonsElement.querySelectorAll('.img-filters__button');
-  buttons.forEach((button) => {
-    button.classList.remove('img-filters__button--active');
+const setOnFilterClick = (cb) => {
+  filterElement.addEventListener('click', (evt) => {
+    if (!evt.target.classList.contains('img-filters__button')) {
+      return;
+    }
+
+    const clickedButton = evt.target;
+    if (clickedButton.id === currentFilter) {
+      return;
+    }
+
+    filterElement.querySelector('.img-filters__button--active')
+      .classList.remove('img-filters__button--active');
+    clickedButton.classList.add('img-filters__button--active');
+    currentFilter = clickedButton.id;
+    cb(getFilteredPictures());
   });
-
-  activeButton.classList.add('img-filters__button--active');
 };
 
-// Функция для переключения фильтра с устранением дребезга
-const debouncedApplyFilter = debounce(applyFilter, RERENDER_DELAY);
-
-const onFilterClick = (evt) => {
-  const target = evt.target;
-
-  if (!target.classList.contains('img-filters__button')) {
-    return;
-  }
-
-  evt.preventDefault();
-
-  const selectedFilter = target.id.replace('filter-', '');
-
-  if (selectedFilter === currentFilter) {
-    return;
-  }
-
-  currentFilter = selectedFilter;
-
-  updateActiveFilterButton(target);
-
-  debouncedApplyFilter(currentFilter);
+const initFilters = (loadedPictures, cb) => {
+  filterElement.classList.remove('img-filters--inactive');
+  pictures = [...loadedPictures];
+  setOnFilterClick(cb);
 };
 
-const initFilters = (loadedPhotos) => {
-  photos = loadedPhotos;
-
-  showFilters();
-
-  filterButtonsElement.addEventListener('click', onFilterClick);
-};
-
-export { initFilters };
+export { initFilters, getFilteredPictures };
