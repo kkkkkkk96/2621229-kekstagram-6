@@ -11,29 +11,24 @@ const Method = {
 };
 
 const ErrorText = {
-  [Method.GET]: 'Не удалось загрузить данные. Попробуйте обновить страницу',
-  [Method.POST]: 'Не удалось отправить форму. Попробуйте ещё раз',
+  GET_DATA: 'Не удалось загрузить данные. Попробуйте обновить страницу',
+  SEND_DATA: 'Не удалось отправить форму. Попробуйте ещё раз',
 };
 
-const load = async (route, errorText, method = Method.GET, body = null) => {
-  try {
-    const response = await fetch(`${BASE_URL}${route}`, {
-      method,
-      body,
+const load = (route, errorText, method = Method.GET, body = null) =>
+  fetch(`${BASE_URL}${route}`, { method, body: body ? body : undefined })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error();
+      }
+      return response.json();
+    })
+    .catch(() => {
+      throw new Error(errorText);
     });
 
-    if (!response.ok) {
-      throw new Error();
-    }
+const getData = () => load(Route.GET_DATA, ErrorText.GET_DATA);
 
-    return response.json();
-  } catch (err) {
-    throw new Error(errorText);
-  }
-};
-
-const getData = () => load(Route.GET_DATA, ErrorText[Method.GET]);
-
-const sendData = (body) => load(Route.SEND_DATA, ErrorText[Method.POST], Method.POST, body);
+const sendData = (body) => load(Route.SEND_DATA, ErrorText.SEND_DATA, Method.POST, body);
 
 export { getData, sendData };
